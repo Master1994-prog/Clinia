@@ -169,7 +169,7 @@ fun CliniaLogin(
 
                     Button(
                         onClick = { vm.login(code, password) },
-                        enabled = !state.loading,
+                        enabled = !state.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
@@ -180,7 +180,7 @@ fun CliniaLogin(
                         )
                     ) {
                         Text(
-                            text = if (state.loading) "Validando..." else "Ingresar",
+                            text = if (state.isLoading) "Validando..." else "Ingresar",
                             fontWeight = FontWeight.SemiBold
                         )
                     }

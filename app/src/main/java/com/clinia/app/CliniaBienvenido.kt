@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -136,13 +138,18 @@ fun CliniaBienvenido(
 
             Spacer(Modifier.height(12.dp))
 
-            // 👉 Texto de continuar (puede ser botón luego)
-            Text(
-                text = "Continuar",
-                color = textPrimary.copy(alpha = 0.65f),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(8.dp)
-            )
+            // ✅ Botón real para continuar
+            Button(
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF0F2A66),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Continuar", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

@@ -6,19 +6,20 @@ import com.clinia.app.data.local.DoctorEntity
 import com.clinia.app.data.local.DoctorRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.util.Locale
 
 // Estado del login
 data class AuthState(
-    val loading: Boolean = false,
-    val error: String? = null,
-    val loggedDoctor: DoctorEntity? = null
+    val loggedDoctor: DoctorEntity? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 class AuthViewModel(
-    private val repo: DoctorRepository
+    private val repository: DoctorRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthState())
@@ -29,32 +30,52 @@ class AuthViewModel(
     }
 
     // 🔐 LOGIN (botón INGRESAR)
-    fun login(codigo: String, password: String) {
-        val cod = codigo.trim().uppercase(Locale.getDefault())
-        val pass = password.trim()
-
-        if (cod.isEmpty() || pass.isEmpty()) {
-            _state.value = _state.value.copy(error = "Ingresa código y contraseña")
-            return
-        }
-
+    fun login(codigo: String, passwordRaw: String) {
         viewModelScope.launch {
-            _state.value = AuthState(loading = true)
+            _state.update { it.copy(isLoading = true, error = null) }
 
-            val doctor = repo.login(cod, pass.sha256())
+            val code = codigo.trim()
+            val passHash = passwordRaw.trim().sha256()   // ✅ AQUÍ SE HASHEA
 
-            _state.value = when {
-                doctor == null ->
-                    AuthState(error = "Código o contraseña incorrectos")
+            val doctor = repository.login(code, passHash)
 
-                !doctor.activo ->
-                    AuthState(error = "Usuario desactivado")
-
-                else ->
-                    AuthState(loggedDoctor = doctor)
+            if (doctor != null && doctor.activo) {
+                _state.update {
+                    it.copy(
+                        loggedDoctor = doctor,
+                        isLoading = false,
+                        error = null
+                    )
+                }
+            } else {
+                _state.update {
+                    it.copy(
+                        loggedDoctor = null,
+                        isLoading = false,
+                        error = "Credenciales inválidas"
+                    )
+                }
             }
         }
     }
+
+    /**
+     * ✅ LOGOUT REAL
+     * Limpia completamente la sesión
+     */
+    fun logout() {
+        _state.update {
+            AuthState() // ← estado limpio, loggedDoctor = null
+        }
+    }
+
+    /**
+     * Opcional: limpiar error manualmente
+     */
+    fun clearError() {
+        _state.update { it.copy(error = null) }
+    }
+
 }
 
 // 🔑 hash simple (para prototipo)

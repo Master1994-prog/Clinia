@@ -1,0 +1,274 @@
+{
+  "rules": [
+    {
+      "cie10": "J02.9",
+      "keywords": [
+        "faringitis",
+        "odinofagia",
+        "garganta"
+      ],
+      "recommendedDci": [
+        "AMOXICILINA",
+        "AZITROMICINA",
+        "PARACETAMOL",
+        "IBUPROFENO"
+      ],
+      "notes": "IRA alta: analgesia/antitérmico y antibiótico solo si criterio clínico."
+    },
+    {
+      "cie10": "J01.9",
+      "keywords": [
+        "sinusitis"
+      ],
+      "recommendedDci": [
+        "AMOXICILINA",
+        "AZITROMICINA",
+        "PARACETAMOL",
+        "IBUPROFENO"
+      ],
+      "notes": "Sinusitis aguda: analgesia; antibiótico según severidad y criterios."
+    },
+    {
+      "cie10": "H66.9",
+      "keywords": [
+        "otitis"
+      ],
+      "recommendedDci": [
+        "AMOXICILINA",
+        "AZITROMICINA",
+        "PARACETAMOL",
+        "IBUPROFENO"
+      ],
+      "notes": "Otitis media: analgésico; antibiótico según edad y signos."
+    },
+    {
+      "cie10": "J20.9",
+      "keywords": [
+        "bronquitis",
+        "tos"
+      ],
+      "recommendedDci": [
+        "SALBUTAMOL",
+        "PARACETAMOL",
+        "IBUPROFENO",
+        "PREDNISONA"
+      ],
+      "notes": "Bronquitis aguda: sintomático; broncodilatador si sibilancias."
+    },
+    {
+      "cie10": "J45.9",
+      "keywords": [
+        "asma",
+        "sibilancias"
+      ],
+      "recommendedDci": [
+        "SALBUTAMOL",
+        "BUDESONIDA",
+        "PREDNISONA"
+      ],
+      "notes": "Asma: rescate con SABA; controlador con ICS según control."
+    },
+    {
+      "cie10": "N39.0",
+      "keywords": [
+        "infeccion urinaria",
+        "cistitis",
+        "disuria"
+      ],
+      "recommendedDci": [
+        "NITROFURANTOINA",
+        "CEFALEXINA",
+        "TRIMETOPRIMA/SULFAMETOXAZOL"
+      ],
+      "notes": "IVU no complicada: elegir según gestación, alergias y resistencia local."
+    },
+    {
+      "cie10": "K21.9",
+      "keywords": [
+        "reflujo",
+        "pirosis",
+        "acidez"
+      ],
+      "recommendedDci": [
+        "OMEPRAZOL",
+        "HIDROXIDO DE ALUMINIO",
+        "HIDROXIDO DE MAGNESIO"
+      ],
+      "notes": "ERGE: IBP; antiácidos como rescate."
+    },
+    {
+      "cie10": "K29.7",
+      "keywords": [
+        "gastritis",
+        "dolor epigastrico"
+      ],
+      "recommendedDci": [
+        "OMEPRAZOL",
+        "SUCRALFATO"
+      ],
+      "notes": "Gastritis: IBP/protector gástrico; evaluar alarma."
+    },
+    {
+      "cie10": "I10",
+      "keywords": [
+        "hipertension",
+        "hta"
+      ],
+      "recommendedDci": [
+        "ENALAPRIL",
+        "LOSARTAN",
+        "HIDROCLOROTIAZIDA",
+        "AMLODIPINO"
+      ],
+      "notes": "HTA: selección según comorbilidades y contraind."
+    },
+    {
+      "cie10": "E11.9",
+      "keywords": [
+        "diabetes",
+        "dm2"
+      ],
+      "recommendedDci": [
+        "METFORMINA",
+        "GLIBENCLAMIDA",
+        "INSULINA NPH"
+      ],
+      "notes": "DM2: metformina primera línea si no contraind; ajustar."
+    },
+    {
+      "cie10": "E78.5",
+      "keywords": [
+        "dislipidemia",
+        "colesterol"
+      ],
+      "recommendedDci": [
+        "ATORVASTATINA",
+        "SIMVASTATINA"
+      ],
+      "notes": "Dislipidemia: estatina según riesgo."
+    },
+    {
+      "cie10": "M54.5",
+      "keywords": [
+        "lumbalgia",
+        "dolor lumbar"
+      ],
+      "recommendedDci": [
+        "PARACETAMOL",
+        "IBUPROFENO",
+        "DICLOFENACO"
+      ],
+      "notes": "Dolor lumbar: AINE/analgesia y medidas no farmacológicas."
+    },
+    {
+      "cie10": "M79.1",
+      "keywords": [
+        "mialgia",
+        "dolor muscular"
+      ],
+      "recommendedDci": [
+        "PARACETAMOL",
+        "IBUPROFENO",
+        "DICLOFENACO"
+      ],
+      "notes": "Mialgia: analgesia; evitar AINE si riesgo."
+    },
+    {
+      "cie10": "R50.9",
+      "keywords": [
+        "fiebre",
+        "febril"
+      ],
+      "recommendedDci": [
+        "PARACETAMOL",
+        "IBUPROFENO"
+      ],
+      "notes": "Fiebre: antipirético; investigar causa."
+    },
+    {
+      "cie10": "L20.9",
+      "keywords": [
+        "dermatitis",
+        "eczema",
+        "prurito"
+      ],
+      "recommendedDci": [
+        "HIDROCORTISONA",
+        "LORATADINA",
+        "CETIRIZINA"
+      ],
+      "notes": "Dermatitis: corticoide tópico + antihistamínico si prurito."
+    },
+    {
+      "cie10": "L30.9",
+      "keywords": [
+        "dermatitis",
+        "prurito"
+      ],
+      "recommendedDci": [
+        "HIDROCORTISONA",
+        "LORATADINA",
+        "CETIRIZINA"
+      ],
+      "notes": "Dermatitis no especificada."
+    },
+    {
+      "cie10": "R51",
+      "keywords": [
+        "cefalea",
+        "dolor de cabeza"
+      ],
+      "recommendedDci": [
+        "PARACETAMOL",
+        "IBUPROFENO",
+        "NAPROXENO"
+      ],
+      "notes": "Cefalea: analgesia; evaluar banderas rojas."
+    },
+    {
+      "cie10": "A09",
+      "keywords": [
+        "diarrea",
+        "gastroenteritis"
+      ],
+      "recommendedDci": [
+        "SALES DE REHIDRATACION ORAL",
+        "ZINC",
+        "LOPERAMIDA"
+      ],
+      "notes": "Diarrea aguda: rehidratación; antibiótico solo indicado."
+    },
+    {
+      "cie10": "B34.9",
+      "keywords": [
+        "virosis",
+        "infeccion viral"
+      ],
+      "recommendedDci": [
+        "PARACETAMOL",
+        "IBUPROFENO",
+        "LORATADINA"
+      ],
+      "notes": "Virosis: manejo sintomático."
+    },
+    {
+      "cie10": "J30.9",
+      "keywords": [
+        "rinitis",
+        "alergica",
+        "estornudos"
+      ],
+      "recommendedDci": [
+        "LORATADINA",
+        "CETIRIZINA",
+        "BUDESONIDA"
+      ],
+      "notes": "Rinitis: antihistamínico; corticoide nasal si disponible."
+    }
+  ],
+  "meta": {
+    "version": "0.1",
+    "source": "Reglas iniciales prototipo (revisar con guías clínicas locales)",
+    "count": 20
+  }
+}

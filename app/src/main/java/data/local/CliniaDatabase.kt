@@ -4,15 +4,25 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.clinia.app.data.local.consultas.ConsultaEntity
+import com.clinia.app.data.local.consultas.ConsultasDao
+import com.clinia.app.data.local.consultas.RecetaEntity
 
 @Database(
-    entities = [DoctorEntity::class],
-    version = 1,
+    entities = [
+        DoctorEntity::class,
+        ConsultaEntity::class,
+        RecetaEntity::class
+    ],
+    version = 2,
     exportSchema = false
 )
 abstract class CliniaDatabase : RoomDatabase() {
 
     abstract fun doctorDao(): DoctorDao
+
+    // ✅ NUEVO
+    abstract fun consultasDao(): ConsultasDao
 
     companion object {
         @Volatile private var INSTANCE: CliniaDatabase? = null

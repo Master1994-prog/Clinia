@@ -3,6 +3,7 @@ package com.clinia.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,28 +22,36 @@ fun CliniaMenuShell(
     Scaffold(
         containerColor = Color(0xFFF4F7FB),
         bottomBar = { CliniaBottomBar(navController = tabNav) }
-    ) { _ ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF4F7FB))
+                .padding(paddingValues) // ✅ AQUÍ
         ) {
-            NavHost(
+
+        NavHost(
                 navController = tabNav,
                 startDestination = CliniaTabRoutes.INICIO
             ) {
+
                 composable(CliniaTabRoutes.INICIO) {
                     CliniaHome(doctorNombre = doctorNombre)
                 }
+
                 composable(CliniaTabRoutes.CHATBOX) {
-                    CliniaChatboxScreen()
+                    CliniaChatboxInteligente()
                 }
+
                 composable(CliniaTabRoutes.PACIENTES) {
-                    CliniaPacientes()
+                    // ✅ AQUÍ SE PASA EL NAVCONTROLLER CORRECTO
+                    CliniaPacientes(navController = tabNav)
                 }
+
                 composable(CliniaTabRoutes.CONSULTAS) {
                     CliniaConsultas()
                 }
+
                 composable(CliniaTabRoutes.AJUSTES) {
                     CliniaAjustes(onLogout = onLogout)
                 }

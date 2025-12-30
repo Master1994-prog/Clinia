@@ -30,12 +30,3 @@ data class PatientContext(
     val spo2: Int?,
     val ramTags: List<String>         // ej: ["alergia_penicilina"]
 )
-
-data class RxSuggestion(
-    val dci: String,
-    val form: String,
-    val dose: String,
-    val frequency: String,
-    val duration: String,
-    val warnings: List<String>
-)

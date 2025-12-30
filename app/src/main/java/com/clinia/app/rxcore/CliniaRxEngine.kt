@@ -2,6 +2,16 @@ package com.clinia.app.rxcore
 
 object CliniaRxEngine {
 
+    /**
+     * Genera sugerencias filtradas por:
+     * - allowlist PNUME (allowedDci)
+     * - edad / embarazo
+     * - RAM tags (contraindicaciones)
+     * - requerimientos mínimos (ej: peso)
+     *
+     * Se llama tal cual lo tienes en tu UI:
+     * CliniaRxEngine.suggest(patient, filteredFormulary, allowedDci, limit)
+     */
     fun suggest(
         patient: PatientContext,
         formulary: List<MedicationRule>,
@@ -9,60 +19,112 @@ object CliniaRxEngine {
         limit: Int = 6
     ): List<RxSuggestion> {
 
-        val dxCodeNorm = normalize(patient.dxCode)
-        val dxDescNorm = normalize(patient.dxDescription)
-        val ramNorm = patient.ramTags.map { normalize(it) }.toSet()
+        val allowedNorm = allowedDci.map { normalize(it) }.toHashSet()
 
-        val candidates = formulary.filter { med ->
+        val edad = patient.edadYears ?: -1
+        val esPediatrico = edad in 0..11
+        val esAdulto = edad >= 12
+        val estaEmbarazada = patient.embarazada == true
+        val ramNorm = patient.ramTags.map { normalize(it) }.toHashSet()
 
-            // 0) ✅ PNUME allowlist (solo DCI permitida)
-            val medDci = normalize(med.name)
-            if (!allowedDci.contains(medDci)) return@filter false
-
-            // 1) ✅ Match Dx: por código o por keyword en descripción
-            val matchDx = med.indications.isEmpty() || med.indications.any { ind ->
-                val indN = normalize(ind)
-                indN == dxCodeNorm || (indN.isNotBlank() && dxDescNorm.contains(indN))
+        val candidates = formulary
+            // 1) Solo lo permitido por PNUME (allowlist por DCI)
+            .filter { normalize(it.name) in allowedNorm }
+            // 2) Filtros básicos por edad
+            .filter { rule ->
+                val minOk = rule.minAgeYears?.let { edad == -1 || edad >= it } ?: true
+                val maxOk = rule.maxAgeYears?.let { edad == -1 || edad <= it } ?: true
+                minOk && maxOk
             }
-            if (!matchDx) return@filter false
-
-            // 2) Edad
-            val edad = patient.edadYears
-            val ageOk = (edad == null) || (edad in med.minAgeYears..med.maxAgeYears)
-            if (!ageOk) return@filter false
-
             // 3) Embarazo
-            val preg = patient.embarazada
-            val pregOk = (preg == null) || (!preg || med.pregnancyAllowed)
-            if (!pregOk) return@filter false
+            .filter { rule ->
+                if (!estaEmbarazada) true else (rule.pregnancyAllowed != false)
+            }
+            // 4) Contraindicaciones: si la RAM del paciente coincide con contraindicaciones del medicamento -> bloquear
+            .filter { rule ->
+                val contra = rule.contraindications.map { normalize(it) }.toHashSet()
+                // si hay intersección, NO pasa
+                contra.intersect(ramNorm).isEmpty()
+            }
+            // 5) Requerimientos mínimos
+            .filter { rule ->
+                val req = rule.requires.map { normalize(it) }.toHashSet()
+                val requierePeso = "peso" in req || "pesokg" in req
+                if (!requierePeso) true else (patient.pesoKg != null)
+            }
 
-            // 4) Contraindicaciones por RAM tags
-            val contraindicated = med.contraindications.any { normalize(it) in ramNorm }
-            if (contraindicated) return@filter false
+        val out = ArrayList<RxSuggestion>(limit)
 
-            // 5) Requeridos (peso)
-            val requiresWeight = med.requires.any { normalize(it) == "peso" }
-            if (requiresWeight && patient.pesoKg == null) return@filter false
+        for (med in candidates) {
+            if (out.size >= limit) break
 
-            true
-        }
+            val (dose, freq, dur) = when {
+                esPediatrico -> pediatricTriple(med, patient)
+                esAdulto -> adultTriple(med)
+                else -> adultTriple(med) // si no hay edad, asumimos adulto
+            }
 
-        return candidates.take(limit).map { med ->
-            val isPediatric = (patient.edadYears != null && patient.edadYears < 12)
+            // si pediátrico y no se pudo calcular por falta de peso, saltar
+            if (esPediatrico && dose.startsWith("FALTA_PESO")) continue
 
-            val dose = if (isPediatric) med.pediatricDosePerKg else med.adultDose
-            val freq = if (isPediatric) med.pediatricFrequency else med.adultFrequency
-            val dur  = if (isPediatric) med.pediatricDuration else med.adultDuration
-
-            RxSuggestion(
+            out += RxSuggestion(
                 dci = med.name,
                 form = med.form,
                 dose = dose,
                 frequency = freq,
                 duration = dur,
-                warnings = med.warnings
+                warnings = med.warnings,
+                contraindications = med.contraindications
             )
         }
+
+        return out
+    }
+
+    // -------------------------
+    // Helpers (dosis)
+    // -------------------------
+
+    private fun adultTriple(med: MedicationRule): Triple<String, String, String> {
+        val d = med.adultDose ?: "Según guía clínica"
+        val f = med.adultFrequency ?: "Según guía clínica"
+        val du = med.adultDuration ?: "Según guía clínica"
+        return Triple(d, f, du)
+    }
+
+    private fun pediatricTriple(med: MedicationRule, patient: PatientContext): Triple<String, String, String> {
+        val peso = patient.pesoKg
+        if (peso == null) {
+            // tu UI puede mostrarlo o simplemente lo filtramos arriba
+            return Triple("FALTA_PESO", "FALTA_PESO", "FALTA_PESO")
+        }
+
+        val perKgText = med.pediatricDosePerKg ?: "Según guía clínica"
+        val freq = med.pediatricFrequency ?: "Según guía clínica"
+        val dur = med.pediatricDuration ?: "Según guía clínica"
+
+        // Si viene algo tipo "40 mg/kg/día", intentamos calcular: 40 * peso = mg/día
+        val mgPorKgPorDia = parseMgPerKgPerDay(perKgText)
+        val dose = if (mgPorKgPorDia != null) {
+            val totalMgDia = mgPorKgPorDia * peso
+            "${totalMgDia.toInt()} mg/día (${perKgText})"
+        } else {
+            perKgText
+        }
+
+        return Triple(dose, freq, dur)
+    }
+
+    /**
+     * Intenta extraer el primer número "mg/kg/día" del texto.
+     * Ej: "40 mg/kg/día" -> 40.0
+     */
+    private fun parseMgPerKgPerDay(text: String): Double? {
+        val t = text.lowercase()
+        // busca patrón "numero mg/kg"
+        val regex = Regex("""(\d+(\.\d+)?)\s*mg\s*/\s*kg""")
+        val m = regex.find(t) ?: return null
+        return m.groupValues[1].toDoubleOrNull()
     }
 
     private fun normalize(s: String): String =

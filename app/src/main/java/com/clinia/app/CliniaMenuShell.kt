@@ -40,7 +40,7 @@ fun CliniaMenuShell(
                 }
 
                 composable(CliniaTabRoutes.CHATBOX) {
-                    CliniaChatboxInteligente()
+                    CliniaChatboxInteligente(navController = tabNav)
                 }
 
                 composable(CliniaTabRoutes.PACIENTES) {

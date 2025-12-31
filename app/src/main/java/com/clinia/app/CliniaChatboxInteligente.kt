@@ -1,6 +1,5 @@
 package com.clinia.app
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,37 +7,35 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.clinia.app.CodigoCieX.Cie10Item
 import com.clinia.app.CodigoCieX.Cie10Picker
 import com.clinia.app.CodigoCieX.Cie10Repository
 import com.clinia.app.PetitorioPNUME.PnumRepository
 import com.clinia.app.data.local.CliniaDatabase
 import com.clinia.app.data.local.consultas.ConsultasRepository
+import com.clinia.app.data.local.consultas.ConsultasViewModel
 import com.clinia.app.data.local.consultas.RxDraft
 import com.clinia.app.pacientes.PacienteStore
 import com.clinia.app.rxcore.CliniaRxEngine
 import com.clinia.app.rxcore.FormularyRepository
-import com.clinia.app.rxcore.MedicationRule
 import com.clinia.app.rxcore.PatientContext
 import com.clinia.app.rxcore.RxSuggestion
-import com.clinia.app.ui.consultas.ConsultasViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 @Composable
-fun CliniaChatboxInteligente() {
+fun CliniaChatboxInteligente(
+    navController: NavHostController
+) {
 
-    // 🎨 Estilo
     val bg = Color(0xFFF4F7FB)
     val title = Color(0xFF0E1A2B)
     val primary = Color(0xFF1E88A8)
@@ -46,15 +43,11 @@ fun CliniaChatboxInteligente() {
     val context = LocalContext.current
 
     // ✅ Paciente activo
-    val pacienteActivo = PacienteStore.pacienteActivo
-    if (pacienteActivo == null) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(bg)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+    val paciente = PacienteStore.pacienteActivo
+    if (paciente == null) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(bg),
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "Selecciona un paciente en 'Pacientes' para usar el chatbot.",
@@ -65,61 +58,64 @@ fun CliniaChatboxInteligente() {
         return
     }
 
-    // ==============================
-    // ✅ Guardar consulta (Room)
-    // ==============================
+    // ✅ Room (guardar consulta)
     val db = remember { CliniaDatabase.get(context) }
     val consultasRepo = remember { ConsultasRepository(db.consultasDao()) }
-    val consultasVm = remember { ConsultasViewModel(consultasRepo) }
-    val consultasState by consultasVm.state.collectAsState()
+    val vm = remember { ConsultasViewModel(consultasRepo) }
+    val state by vm.state.collectAsState()
 
-    var selectedRx by remember { mutableStateOf<RxSuggestion?>(null) }
-    var notas by rememberSaveable { mutableStateOf("") }
-
-    val snack = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(consultasState.lastSavedId) {
-        if (consultasState.lastSavedId != null) {
-            scope.launch { snack.showSnackbar("✅ Consulta guardada correctamente") }
-            consultasVm.clearSavedFlag()
-            selectedRx = null
-            notas = ""
-        }
-    }
-
-    // Repos clínicos
+    // ✅ Catálogos
     val cieRepo = remember { Cie10Repository(context) }
     val pnumRepo = remember { PnumRepository(context) }
     val formularyRepo = remember { FormularyRepository(context) }
 
     var ready by remember { mutableStateOf(false) }
     var allowedDci by remember { mutableStateOf(emptySet<String>()) }
-    var formulary by remember { mutableStateOf(emptyList<MedicationRule>()) }
+    var formularyRules by remember { mutableStateOf(emptyList<com.clinia.app.rxcore.MedicationRule>()) }
     var dxRules by remember { mutableStateOf(emptyList<DxRule>()) }
 
     LaunchedEffect(Unit) {
+        // CIE10
         cieRepo.ensureLoaded()
 
+        // PNUME (assets/pnume.csv)
         pnumRepo.ensureLoaded("pnume.csv")
         allowedDci = pnumRepo.allowedDciSet()
 
-        formulary = formularyRepo.loadFromAssets("formulary.json")
+        // Formulary (assets/formulary.json)
+        formularyRules = formularyRepo.loadFromAssets("formulary.json")
+
+        // Reglas DX (assets/dx_rules.json)
         dxRules = DxRulesRepository.loadFromAssets(context, "dx_rules.json")
 
         ready = true
     }
 
-    // DX (CIE-10)
+    // ✅ UI state
     var dxQuery by remember { mutableStateOf("") }
     var selectedDx by remember { mutableStateOf<Cie10Item?>(null) }
+
     val dxResults = remember(dxQuery, ready) {
         if (ready) cieRepo.search(dxQuery, 25) else emptyList()
     }
 
-    // Resultados
-    var suggestions by remember { mutableStateOf(emptyList<RxSuggestion>()) }
+    var suggestions by remember { mutableStateOf<List<RxSuggestion>>(emptyList()) }
+    var selectedRx by remember { mutableStateOf<RxSuggestion?>(null) }
+    var notas by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // ✅ Toast tipo snackbar cuando se guarda
+    LaunchedEffect(state.lastSavedId) {
+        if (state.lastSavedId != null) {
+            scope.launch { snackbar.showSnackbar("✅ Consulta guardada correctamente") }
+            vm.clearSavedFlag()
+            selectedRx = null
+            notas = ""
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -128,8 +124,7 @@ fun CliniaChatboxInteligente() {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // ✅ Snackbar visible
-        SnackbarHost(hostState = snack)
+        SnackbarHost(hostState = snackbar)
         Spacer(Modifier.height(8.dp))
 
         Text(
@@ -138,15 +133,16 @@ fun CliniaChatboxInteligente() {
             fontWeight = FontWeight.ExtraBold,
             color = title
         )
+
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "Paciente: ${pacienteActivo.nombres} • ${pacienteActivo.edad}a • ${pacienteActivo.sexo}",
+            text = "Paciente: ${paciente.nombres} • ${paciente.edad}a • ${paciente.sexo}",
             color = title.copy(alpha = 0.85f),
             fontWeight = FontWeight.SemiBold
         )
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
         if (!ready) {
             Text(
@@ -156,7 +152,33 @@ fun CliniaChatboxInteligente() {
             return@Column
         }
 
-        // Caja DX
+        Button(
+            onClick = {
+                // 🔁 Volver a la lista de pacientes
+                PacienteStore.clear()
+                navController.navigate(CliniaTabRoutes.PACIENTES) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1E88E5) // azul Clinia
+            ),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Text(
+                text = "Cambiar paciente",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // =========================
+        // 1) DIAGNÓSTICO (CIE10)
+        // =========================
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -172,16 +194,16 @@ fun CliniaChatboxInteligente() {
                 onQueryChange = {
                     dxQuery = it
                     selectedDx = null
-                    selectedRx = null
                     suggestions = emptyList()
+                    selectedRx = null
                     error = null
                 },
                 results = dxResults,
                 onPick = { picked ->
                     selectedDx = picked
                     dxQuery = "${picked.codigo} - ${picked.descripcion}"
-                    selectedRx = null
                     suggestions = emptyList()
+                    selectedRx = null
                     error = null
                 }
             )
@@ -189,7 +211,9 @@ fun CliniaChatboxInteligente() {
 
         Spacer(Modifier.height(12.dp))
 
-        // Botón generar
+        // =========================
+        // 2) GENERAR SUGERENCIAS
+        // =========================
         Button(
             onClick = {
                 error = null
@@ -205,25 +229,23 @@ fun CliniaChatboxInteligente() {
                 val patient = PatientContext(
                     dxCode = dx.codigo,
                     dxDescription = dx.descripcion,
-                    sexo = pacienteActivo.sexo,
-                    edadYears = pacienteActivo.edad,
-                    embarazada = if (pacienteActivo.sexo == "F") (pacienteActivo.embarazada ?: false) else false,
-                    pesoKg = pacienteActivo.peso,
-                    tallaCm = pacienteActivo.talla,
+                    sexo = paciente.sexo,
+                    edadYears = paciente.edad,
+                    embarazada = if (paciente.sexo == "F") (paciente.embarazada ?: false) else false,
+                    pesoKg = paciente.peso,
+                    tallaCm = paciente.talla,
                     spo2 = null,
-                    ramTags = pacienteActivo.ram
+                    ramTags = paciente.ram
                 )
 
+                // Regla por DX (si existe) para sugerir solo ciertos DCI
                 val rule = DxRulesRepository.pickRule(dx.codigo, dx.descripcion, dxRules)
-                val dciForDx = rule?.recommendedDci
-                    ?.map { normalize(it) }
-                    ?.toSet()
-                    ?: emptySet()
+                val dciForDx = rule?.recommendedDci?.map { normalize(it) }?.toSet() ?: emptySet()
 
                 val filteredFormulary = if (dciForDx.isNotEmpty()) {
-                    formulary.filter { normalize(it.name) in dciForDx }
+                    formularyRules.filter { normalize(it.name) in dciForDx }
                 } else {
-                    formulary
+                    formularyRules
                 }
 
                 val result = CliniaRxEngine.suggest(
@@ -238,9 +260,7 @@ fun CliniaChatboxInteligente() {
                     error = "No hay alternativas que cumplan DX + PNUME + reglas actuales."
                 }
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = primary),
             shape = RoundedCornerShape(14.dp)
         ) {
@@ -254,7 +274,9 @@ fun CliniaChatboxInteligente() {
 
         Spacer(Modifier.height(14.dp))
 
-        // Sugerencias
+        // =========================
+        // 3) LISTA DE OPCIONES
+        // =========================
         if (suggestions.isNotEmpty()) {
             Text("Opciones sugeridas", fontWeight = FontWeight.Bold, color = title)
             Spacer(Modifier.height(10.dp))
@@ -277,7 +299,9 @@ fun CliniaChatboxInteligente() {
                     if (s.warnings.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text("Consideraciones:", fontWeight = FontWeight.Bold, color = title)
-                        s.warnings.forEach { w -> Text("• $w", color = title.copy(alpha = 0.80f)) }
+                        s.warnings.forEach { w ->
+                            Text("• $w", color = title.copy(alpha = 0.80f))
+                        }
                     }
 
                     Spacer(Modifier.height(10.dp))
@@ -295,9 +319,11 @@ fun CliniaChatboxInteligente() {
             }
         }
 
-        // Guardar consulta (solo si hay receta seleccionada)
+        // =========================
+        // 4) GUARDAR CONSULTA (ROOM)
+        // =========================
         if (selectedRx != null && selectedDx != null) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             Column(
                 modifier = Modifier
@@ -330,9 +356,9 @@ fun CliniaChatboxInteligente() {
                     val dx = selectedDx!!
                     val rx = selectedRx!!
 
-                    consultasVm.guardar(
-                        pacienteId = pacienteActivo.id,
-                        pacienteNombre = pacienteActivo.nombres,
+                    vm.guardar(
+                        pacienteId = paciente.id.toLong(),
+                        pacienteNombre = paciente.nombres,
                         dxCie10 = dx.codigo,
                         dxDescripcion = dx.descripcion,
                         notas = notas.trim(),
@@ -346,27 +372,21 @@ fun CliniaChatboxInteligente() {
                         )
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = primary),
                 shape = RoundedCornerShape(14.dp),
-                enabled = !consultasState.isLoading
+                enabled = !state.isSaving
             ) {
                 Text(
-                    text = if (consultasState.isLoading) "Guardando..." else "Guardar consulta",
+                    text = if (state.isSaving) "Guardando..." else "Guardar consulta",
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            if (consultasState.error != null) {
+            if (state.error != null) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = consultasState.error!!,
-                    color = Color(0xFFD32F2F),
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text(state.error!!, color = Color(0xFFD32F2F), fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -374,9 +394,9 @@ fun CliniaChatboxInteligente() {
     }
 }
 
-/* =========================
-   DX RULES (assets loader)
-   ========================= */
+/* ======================
+   DX RULES (assets json)
+   ====================== */
 
 data class DxRule(
     val cie10: String,

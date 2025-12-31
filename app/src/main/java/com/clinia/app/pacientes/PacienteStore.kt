@@ -6,4 +6,7 @@ import androidx.compose.runtime.setValue
 
 object PacienteStore {
     var pacienteActivo: Paciente? by mutableStateOf(null)
+    fun clear() {
+        pacienteActivo = null
+    }
 }

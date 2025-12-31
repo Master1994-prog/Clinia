@@ -4,6 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ConsultasDao {
@@ -14,17 +16,14 @@ interface ConsultasDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReceta(r: RecetaEntity): Long
 
-    @Query("""
-        SELECT * FROM consultas
-        WHERE pacienteId = :pacienteId
-        ORDER BY createdAtMillis DESC
-    """)
-    suspend fun listConsultasByPaciente(pacienteId: Int): List<ConsultaEntity>
+    @Transaction
+    suspend fun insertConsultaConReceta(c: ConsultaEntity, r: RecetaEntity): Long {
+        val consultaId = insertConsulta(c)
+        insertReceta(r.copy(consultaId = consultaId))
+        return consultaId
+    }
 
-    @Query("""
-        SELECT * FROM recetas
-        WHERE consultaId = :consultaId
-        LIMIT 1
-    """)
-    suspend fun getRecetaByConsulta(consultaId: Long): RecetaEntity?
+    @Transaction
+    @Query("SELECT * FROM consultas ORDER BY fechaHoraMillis DESC")
+    fun observeConsultas(): Flow<List<ConsultaConReceta>>
 }

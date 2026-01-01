@@ -1,8 +1,5 @@
 package com.clinia.app
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -12,28 +9,30 @@ import com.clinia.app.data.local.CliniaDatabase
 import com.clinia.app.data.local.DoctorEntity
 import com.clinia.app.data.local.DoctorRepository
 import com.clinia.app.ui.auth.AuthViewModel
-import kotlinx.coroutines.launch
+import java.security.MessageDigest
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { AppRoot() }
-    }
-}
-
-/*@Composable
+@Composable
 fun AppRoot() {
+
     val navController = rememberNavController()
+    val context = LocalContext.current.applicationContext
 
-    val appContext = LocalContext.current.applicationContext
-    val db = remember { CliniaDatabase.get(appContext) }
+    // ===============================
+    // BASE DE DATOS + REPOSITORIO
+    // ===============================
+    val db = remember { CliniaDatabase.get(context) }
     val repo = remember { DoctorRepository(db.doctorDao()) }
-    val vm = remember { AuthViewModel(repo) }
 
-    val state by vm.state.collectAsState()
-    val doctor = state.loggedDoctor
+    // ===============================
+    // VIEWMODEL (sin Hilt por ahora)
+    // ===============================
+    val authVm = remember { AuthViewModel(repo) }
+    val authState by authVm.state.collectAsState()
+    val doctor = authState.loggedDoctor
 
-    // ✅ Doctor DEMO para probar login (Código: CLN-123 / Pass: 1234)
+    // ===============================
+    // DOCTOR DEMO (solo para pruebas)
+    // ===============================
     LaunchedEffect(Unit) {
         runCatching {
             repo.registerDoctor(
@@ -49,6 +48,9 @@ fun AppRoot() {
         }
     }
 
+    // ===============================
+    // NAVEGACIÓN PRINCIPAL
+    // ===============================
     NavHost(
         navController = navController,
         startDestination = "splash"
@@ -56,7 +58,11 @@ fun AppRoot() {
 
         composable("splash") {
             CliniaSplash(
-                onFinished = { navController.navigate("onboarding1") }
+                onFinished = {
+                    navController.navigate("onboarding1") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -74,10 +80,10 @@ fun AppRoot() {
 
         composable("login") {
             CliniaLogin(
-                vm = vm,
+                vm = authVm,
                 onLogin = {
-                    // ✅ si el login fue OK, vm.state.loggedDoctor se llenará
                     navController.navigate("bienvenido") {
+                        popUpTo("login") { inclusive = true }
                         launchSingleTop = true
                     }
                 },
@@ -102,7 +108,6 @@ fun AppRoot() {
                 doctorNombre = nombreCompleto,
                 onContinue = {
                     navController.navigate("menu") {
-                        // ✅ evita volver a Bienvenido con back
                         popUpTo("bienvenido") { inclusive = true }
                         launchSingleTop = true
                     }
@@ -110,28 +115,31 @@ fun AppRoot() {
             )
         }
 
-        // ✅✅ AQUÍ VA EXACTAMENTE LO QUE ME MOSTRASTE (MENU + LOGOUT REAL)
         composable("menu") {
             val nombreCompleto =
                 doctor?.let { "${it.nombres} ${it.apellidos}" } ?: "Doctor(a)"
 
             CliniaMenuShell(
                 doctorNombre = nombreCompleto,
+                medicoId = doctor?.id ?: 0L,
                 onLogout = {
-                    vm.logout()
+                    authVm.logout()
                     navController.navigate("login") {
-                        popUpTo(0) { inclusive = true } // ✅ borra todo el backstack
+                        popUpTo(0) { inclusive = true }
                         launchSingleTop = true
                     }
                 }
             )
         }
     }
-}*/
+}
 
-// ✅ SHA256 para que la contraseña demo se guarde igual que el login (hash)
+/**
+ * HASH SHA-256
+ * (para que el password demo coincida con el login)
+ */
 private fun String.sha256(): String {
-    val md = java.security.MessageDigest.getInstance("SHA-256")
+    val md = MessageDigest.getInstance("SHA-256")
     val bytes = md.digest(this.toByteArray())
     return bytes.joinToString("") { "%02x".format(it) }
 }

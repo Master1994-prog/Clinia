@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 @Composable
 fun CliniaMenuShell(
     doctorNombre: String,
+    medicoId: Long,
     onLogout: () -> Unit
 ) {
     val tabNav = rememberNavController()
@@ -31,8 +32,9 @@ fun CliniaMenuShell(
         ) {
 
         NavHost(
-                navController = tabNav,
-                startDestination = CliniaTabRoutes.INICIO
+            navController = tabNav,
+            startDestination = CliniaTabRoutes.INICIO,
+            modifier = Modifier.padding(paddingValues)
             ) {
 
                 composable(CliniaTabRoutes.INICIO) {
@@ -49,7 +51,10 @@ fun CliniaMenuShell(
                 }
 
                 composable(CliniaTabRoutes.CONSULTAS) {
-                    CliniaConsultas()
+                    PantallaConsultasHost(
+                        medicoId = medicoId,
+                        pacienteId = 1L
+                    )
                 }
 
                 composable(CliniaTabRoutes.AJUSTES) {

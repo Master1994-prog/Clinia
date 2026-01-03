@@ -7,7 +7,6 @@ import retrofit2.http.Body
 
 interface AuthApi {
 
-    // ✅ Usar nombre calificado evita choques con otro POST
     @retrofit2.http.POST("auth/login")
     suspend fun login(
         @Body req: LoginRequest
